@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #f3eee4;
+  --cream-deep: #e7dfd0;
+  --paper: #fffaf3;
+  --ink: #1c1915;
+  --ink-soft: #5c5348;
+  --moss: #1e4a38;
+  --moss-mid: #2f6b4f;
+  --leaf: #7f9a62;
+  --clay: #c4622d;
+  --clay-deep: #8c3f18;
+  --gold: #e0a84a;
+  --dusk: #12241c;
+  --line: rgba(28, 25, 21, 0.12);
+  --background: var(--cream);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-cream-deep: var(--cream-deep);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-moss: var(--moss);
+  --color-moss-mid: var(--moss-mid);
+  --color-leaf: var(--leaf);
+  --color-clay: var(--clay);
+  --color-clay-deep: var(--clay-deep);
+  --color-gold: var(--gold);
+  --color-dusk: var(--dusk);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-figtree);
+  --font-display: var(--font-fraunces);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(224, 168, 74, 0.16), transparent 50%),
+    radial-gradient(900px 420px at 100% 0%, rgba(47, 107, 79, 0.1), transparent 46%),
+    var(--cream);
+  color: var(--ink);
+  font-family: var(--font-figtree), "Figtree", sans-serif;
+  min-height: 100dvh;
+}
+
+::selection {
+  background: #e0a84a;
+  color: #1c1915;
+}
+
+:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 3px;
+}
+
+.font-display {
+  font-family: var(--font-fraunces), "Fraunces", Georgia, serif;
+}
+
+.kicker {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.journal-card {
+  background: var(--paper);
+  border-radius: 1.6rem 1.35rem 1.7rem 1.25rem;
+  box-shadow: 0 18px 50px rgba(28, 25, 21, 0.08);
+}
+
+.photo-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.4rem;
+}
+
+.photo-frame img,
+.photo-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.finder-corner {
+  position: absolute;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-color: rgba(255, 250, 243, 0.92);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.finder-tl { top: 0.85rem; left: 0.85rem; border-width: 2px 0 0 2px; }
+.finder-tr { top: 0.85rem; right: 0.85rem; border-width: 2px 2px 0 0; }
+.finder-bl { bottom: 0.85rem; left: 0.85rem; border-width: 0 0 2px 2px; }
+.finder-br { bottom: 0.85rem; right: 0.85rem; border-width: 0 2px 2px 0; }
+
+.scanline {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(224, 168, 74, 0.1), #fffaf3, rgba(224, 168, 74, 0.1), transparent);
+  box-shadow: 0 0 18px rgba(255, 250, 243, 0.8);
+  animation: scan 1.7s ease-in-out infinite alternate;
+}
+
+@keyframes scan {
+  from { top: 12%; }
+  to { top: 84%; }
+}
+
+.stamp {
+  animation: stamp-in 0.45s ease-out both;
+}
+
+@keyframes stamp-in {
+  from { opacity: 0; transform: rotate(-14deg) scale(1.35); }
+  to { opacity: 1; transform: rotate(-8deg) scale(1); }
+}
+
+.app-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pb-nav {
+  padding-bottom: calc(5.6rem + env(safe-area-inset-bottom));
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #e7dfd0;
+  font-family: inherit;
+}
+
+.field-pin {
+  background: transparent;
+  border: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

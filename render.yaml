@@ -1,0 +1,24 @@
+# Render blueprint for the Fieldnote web service.
+# Free instances have about 512 MB of RAM. Identification stays on the phone there.
+# To run CLIP and Gemma on the server, use an instance with at least 2 GB RAM and
+# set ENABLE_SERVER_MODELS to true.
+services:
+  - type: web
+    name: fieldnote
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: DEMO_MODE
+        value: "true"
+      - key: ENABLE_SERVER_MODELS
+        value: "false"
