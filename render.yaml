@@ -1,10 +1,10 @@
-# Render blueprint for the Fieldnote web service.
+# Render blueprint for the Spotted web service.
 # Free instances have about 512 MB of RAM. Identification stays on the phone there.
 # To run CLIP and Gemma on the server, use an instance with at least 2 GB RAM and
 # set ENABLE_SERVER_MODELS to true.
 services:
   - type: web
-    name: fieldnote
+    name: spotted
     runtime: node
     plan: free
     region: frankfurt

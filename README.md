@@ -1,6 +1,6 @@
-# Fieldnote
+# Spotted
 
-A pocket field guide. You photograph a bird, animal, insect, or plant. An open model suggests the name. Then you look up again.
+See nature. Share it. You photograph a bird, animal, insect, or plant. An open model suggests the name. Then you share the sighting, or you just look up again.
 
 The product name is one constant, `APP_NAME` in [`src/config/brand.ts`](src/config/brand.ts).
 

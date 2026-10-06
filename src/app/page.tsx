@@ -19,8 +19,8 @@ export default function HomePage() {
         <div>
           <p className="kicker text-clay">A pocket field guide</p>
           <h1 className="mt-3 font-display text-[clamp(3.4rem,8vw,6.6rem)] leading-[0.9] tracking-tight text-ink">
-            Name it.
-            <span className="mt-1 block italic text-moss">Then look up.</span>
+            {APP_TAGLINE.split(". ")[0]}.
+            <span className="mt-1 block italic text-moss">{APP_TAGLINE.split(". ")[1]}</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-ink-soft">
             {APP_NAME} is for the moment you meet a bird, a lizard, a tree, or something you cannot place.
@@ -34,7 +34,7 @@ export default function HomePage() {
               <Link href="/feed">Walk the demo trail</Link>
             </Button>
           </div>
-          <p className="mt-6 max-w-md text-sm leading-6 text-ink-soft">{APP_TAGLINE} The demo runs through Lekki, Okomu, Obudu, and Yankari, and the guide still works on a street that is not in Nigeria.</p>
+          <p className="mt-6 max-w-md text-sm leading-6 text-ink-soft">The demo runs through Lekki, Okomu, Obudu, and Yankari, and the guide still works on a street that is not in Nigeria.</p>
         </div>
 
         <div className="relative pb-28 lg:pb-16">

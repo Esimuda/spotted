@@ -1,5 +1,5 @@
 ---
-title: Name it, then look up
+title: See nature. Share it.
 published: false
 tags: devchallenge, hf26challenge
 ---
@@ -10,11 +10,11 @@ I spend a lot of the week in community calls, docs, and group chats. Useful work
 
 I live in Nigeria, so the demo trail runs through places I want people to actually go: Lekki Conservation Centre, Okomu, Obudu, and Yankari. The guide is not only for those parks. A robin in a hedge and a dandelion in a pavement crack are in the list too.
 
-The name on the app is a placeholder. Change `APP_NAME` in `src/config/brand.ts` and it follows the interface, the install name, and the tab title.
+The name is Spotted. It still lives in one constant, `APP_NAME` in `src/config/brand.ts`, and that constant is what the interface, the install name, and the tab title use.
 
 ## What I Built
 
-Fieldnote is a pocket field guide and a very small social trail.
+Spotted is a pocket field guide and a very small social trail.
 
 You are outside. You see a bird, a lizard, a tree, an insect. You take one photo. An open vision model suggests a common name, a scientific name, and a confidence from a bundled field guide. The note already knows habitat, diet, behaviour, and conservation status, because those facts ship with the app. You can save the sighting, react, and comment. There is a map and a life list with a streak.
 
