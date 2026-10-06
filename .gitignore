@@ -31,8 +31,16 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.*
 !.env.example
+
+# downloaded model weights
+*.onnx
+*.safetensors
+*.gguf
+*.pt
+*.pth
 
 # vercel
 .vercel
