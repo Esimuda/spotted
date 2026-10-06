@@ -99,7 +99,7 @@ Gemma 3 270M is small enough to run and too small to trust with natural history.
 
 1. Push this repository to GitHub or GitLab.
 2. In the Render dashboard, choose **New** then **Blueprint**. Point it at the repo. Render reads `render.yaml`.
-3. The blueprint creates a free web service in Frankfurt, builds with `npm ci && npm run build`, and starts with `npm start`. `PORT` is provided by Render. The health check is `/api/health`.
+3. The blueprint creates a free web service in Frankfurt, builds with `npm ci --include=dev && npm run build`, and starts with `npm start`. `PORT` is provided by Render. The health check is `/api/health`. Dev dependencies stay installed because `NODE_ENV` is `production`.
 4. Free instances have about 512 MB of RAM. `ENABLE_SERVER_MODELS` is `false` there, on purpose. The trail, the map, and the life list run. Naming runs in the visitor's browser.
 5. Open the service URL. The demo trail is seeded the first time the database is created.
 
@@ -119,7 +119,7 @@ ollama pull gemma3:270m
 
 Set `GEMMA_BASE_URL=http://127.0.0.1:11434/v1` and `GEMMA_MODEL=gemma3:270m`. The API tries that endpoint before the in-process Gemma file.
 
-Manual setup, if you are not using the blueprint: New Web Service, runtime Node, build command `npm ci && npm run build`, start command `npm start`, health check path `/api/health`, and the env vars in `render.yaml`.
+Manual setup, if you are not using the blueprint: New Web Service, runtime Node, build command `npm ci --include=dev && npm run build`, start command `npm start`, health check path `/api/health`, and the env vars in `render.yaml`.
 
 ## Project shape
 
