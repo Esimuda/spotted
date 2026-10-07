@@ -38,6 +38,7 @@ export function SightingCard({ sighting }: { sighting: Sighting }) {
             {formatWhen(sighting.createdAt)}
           </time>
         </div>
+        {sighting.note ? <p className="line-clamp-3 text-sm leading-6">{sighting.note}</p> : null}
         {sighting.demo ? <p className="text-xs text-ink-soft">Demo note · reference photo</p> : null}
         {sighting.pending ? <p className="text-xs font-semibold text-clay-deep">Saved on this phone · waiting to sync</p> : null}
         <ReactionBar reactions={sighting.reactions} onReact={(kind) => void react(sighting.id, kind)} />

@@ -20,6 +20,6 @@ const STATUS_CLASS: Record<Iucn, string> = {
   NE: "bg-cream-deep text-ink-soft",
 };
 
-export function StatusBadge({ status, label }: { status: Iucn; label: string }) {
-  return <Badge className={STATUS_CLASS[status]}>{label}</Badge>;
+export function StatusBadge({ status, label, onPhoto = false }: { status: Iucn; label: string; onPhoto?: boolean }) {
+  return <Badge className={onPhoto ? "bg-cream text-dusk" : STATUS_CLASS[status]}>{label}</Badge>;
 }

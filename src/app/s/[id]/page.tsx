@@ -13,13 +13,16 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/badge";
+import type { Comment } from "@/lib/types";
 
 export default function SightingPage() {
   const params = useParams<{ id: string }>();
-  const { sightings, loading, comment, react } = useTrail();
+  const { sightings, loading, profiles, comment, react } = useTrail();
   const sighting = sightings.find((item) => item.id === params.id);
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [localComments, setLocalComments] = useState<Comment[]>([]);
 
   if (loading) return <p className="px-4 py-10">Finding that note…</p>;
   if (!sighting) {
@@ -32,6 +35,8 @@ export default function SightingPage() {
       </div>
     );
   }
+
+  const comments = visibleComments(sighting.comments, localComments, sighting.id);
 
   return (
     <article className="mx-auto max-w-lg px-4 py-4">
@@ -72,9 +77,9 @@ export default function SightingPage() {
         <ReactionBar reactions={sighting.reactions} onReact={(kind) => void react(sighting.id, kind)} />
       </div>
       <h2 className="mt-8 font-display text-3xl">Notes from the trail</h2>
-      <ul className="mt-3 space-y-3">
-        {sighting.comments.length === 0 ? <li className="text-sm text-ink-soft">No comments yet. Leave one, then go back outside.</li> : null}
-        {sighting.comments.map((item) => (
+      <ul className="mt-3 space-y-3" aria-live="polite">
+        {comments.length === 0 ? <li className="text-sm text-ink-soft">No comments yet. Leave one, then go back outside.</li> : null}
+        {comments.map((item) => (
           <li key={item.id} className="rounded-2xl bg-paper px-4 py-3">
             <p className="text-sm font-semibold text-moss">{item.authorName}</p>
             <p className="mt-1 text-sm leading-6">{item.body}</p>
@@ -85,19 +90,55 @@ export default function SightingPage() {
         className="mt-4 space-y-2"
         onSubmit={(event) => {
           event.preventDefault();
-          void comment(sighting.id, body)
-            .then(() => {
-              setBody("");
-              setError("");
+          const text = body.trim();
+          if (!text) {
+            setError("Write a short comment first.");
+            return;
+          }
+          const you = profiles.find((profile) => profile.id === "you");
+          const optimistic: Comment = {
+            id: `pending-${crypto.randomUUID()}`,
+            sightingId: sighting.id,
+            authorId: "you",
+            authorName: you?.name ?? "You",
+            body: text,
+            createdAt: new Date().toISOString(),
+          };
+          setLocalComments((current) => [...current, optimistic]);
+          setBody("");
+          setError("");
+          setPosting(true);
+          void comment(sighting.id, text)
+            .then((created) => {
+              setLocalComments((current) => current.map((item) => (item.id === optimistic.id ? created : item)));
             })
-            .catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not comment."));
+            .catch((err: unknown) => {
+              setLocalComments((current) => current.filter((item) => item.id !== optimistic.id));
+              setBody(text);
+              setError(err instanceof Error ? err.message : "Could not comment.");
+            })
+            .finally(() => setPosting(false));
         }}
       >
         <Label htmlFor="comment">Add a comment</Label>
         <Textarea id="comment" value={body} onChange={(event) => setBody(event.target.value)} placeholder="A thing you noticed, not a speech." />
-        {error ? <p className="text-sm text-clay-deep">{error}</p> : null}
-        <Button type="submit">Post comment</Button>
+        {error ? (
+          <p className="rounded-2xl bg-clay/15 px-3 py-2 text-sm text-clay-deep" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" disabled={posting}>{posting ? "Posting…" : "Post comment"}</Button>
       </form>
     </article>
   );
+}
+
+function visibleComments(server: Comment[], local: Comment[], sightingId: string): Comment[] {
+  const byId = new Map<string, Comment>();
+  for (const item of server) byId.set(item.id, item);
+  for (const item of local) {
+    if (item.sightingId !== sightingId) continue;
+    byId.set(item.id, item);
+  }
+  return [...byId.values()];
 }

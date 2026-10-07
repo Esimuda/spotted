@@ -306,13 +306,13 @@ export function IdentifyFlow() {
             <div className="absolute right-4 top-4 stamp rounded-md border-2 border-gold px-2 py-1 text-xs font-bold uppercase tracking-[0.16em] text-gold">
               Noted
             </div>
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-dusk via-dusk/55 to-transparent p-5 text-cream">
-              <p className="kicker text-gold">{headline}</p>
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-dusk from-25% via-dusk/88 to-transparent px-5 pb-5 pt-24 text-cream">
+              <p className="kicker text-cream">{headline}</p>
               <h1 className="font-display text-5xl leading-[0.9]">{species.commonName}</h1>
-              <p className="mt-2 italic text-cream/80">{species.scientificName}</p>
+              <p className="mt-2 italic text-cream/90">{species.scientificName}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <StatusBadge status={species.status} label={IUCN_LABEL[species.status]} />
-                <span className="text-sm text-cream/80">
+                <StatusBadge onPhoto status={species.status} label={IUCN_LABEL[species.status]} />
+                <span className="text-sm text-cream">
                   {formatScore(([result.top, ...result.alternatives].find((match) => match.speciesId === chosenId) ?? result.top).score)} guide match · {result.engine === "browser" ? "on this phone" : "on the server"}
                 </span>
               </div>
@@ -374,19 +374,23 @@ export function IdentifyFlow() {
                 This species is sensitive. The shared pin is rounded to about 11 km before it is saved. The exact spot does not go to the server.
               </p>
             ) : null}
-            <Dialog>
-              <DialogTrigger className="text-sm font-semibold text-moss underline-offset-4 hover:underline">
-                Why soften a pin?
-              </DialogTrigger>
-              <DialogContent>
-                <DialogTitle>A name is not a map pin</DialogTitle>
-                <DialogDescription>
-                  Threatened species, and a few timber trees, are stored as a grid cell about 11 kilometres across. The server never receives the exact point. Sharing itself stays off until you opt in.
-                </DialogDescription>
-              </DialogContent>
-            </Dialog>
-            <Label htmlFor="note">A line for later</Label>
-            <Textarea id="note" value={note} maxLength={280} onChange={(event) => setNote(event.target.value)} placeholder="What were you doing when you looked up?" />
+            <div>
+              <Dialog>
+                <DialogTrigger className="text-sm font-semibold text-moss underline-offset-4 hover:underline">
+                  Why soften a pin?
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogTitle>A name is not a map pin</DialogTitle>
+                  <DialogDescription>
+                    Threatened species, and a few timber trees, are stored as a grid cell about 11 kilometres across. The server never receives the exact point. Sharing itself stays off until you opt in.
+                  </DialogDescription>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="note" className="block">A line for later</Label>
+              <Textarea id="note" value={note} maxLength={280} onChange={(event) => setNote(event.target.value)} placeholder="What were you doing when you looked up?" />
+            </div>
           </div>
 
           {error ? <p className="text-sm text-clay-deep">{error}</p> : null}

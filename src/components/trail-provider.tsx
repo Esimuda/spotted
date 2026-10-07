@@ -35,7 +35,7 @@ type TrailContextValue = {
   sightings: Sighting[];
   refresh: () => Promise<void>;
   createSighting: (input: CreateInput) => Promise<Sighting>;
-  comment: (id: string, body: string) => Promise<void>;
+  comment: (id: string, body: string) => Promise<Comment>;
   react: (id: string, kind: ReactionKind) => Promise<void>;
   saveProfile: (patch: { name?: string; homeBase?: string; bio?: string }) => Promise<void>;
 };
@@ -205,20 +205,30 @@ export function TrailProvider({ children }: { children: React.ReactNode }) {
     [profiles],
   );
 
-  const comment = useCallback(async (id: string, body: string) => {
-    const response = await fetch(`/api/sightings/${id}/comments`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ body }),
-    });
-    const payload = (await response.json()) as Comment | { error?: string };
-    if (!response.ok) throw new Error("error" in payload ? payload.error : "Could not comment.");
-    const created = payload as Comment;
-    setSightings((current) =>
-      current.map((sighting) =>
-        sighting.id === id ? { ...sighting, comments: [...sighting.comments, created] } : sighting,
-      ),
-    );
+  const comment = useCallback(async (id: string, body: string): Promise<Comment> => {
+    try {
+      const response = await fetch(`/api/sightings/${id}/comments`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
+      const payload = (await response.json().catch(() => null)) as (Comment & { error?: string }) | null;
+      if (!response.ok || !payload?.id || !payload.body) {
+        throw new Error(payload?.error || "Could not comment.");
+      }
+      const created: Comment = payload;
+      setSightings((current) =>
+        current.map((sighting) => {
+          if (sighting.id !== id) return sighting;
+          if (sighting.comments.some((item) => item.id === created.id)) return sighting;
+          return { ...sighting, comments: [...sighting.comments, created] };
+        }),
+      );
+      return created;
+    } catch (error) {
+      if (error instanceof Error && error.message !== "Failed to fetch") throw error;
+      throw new Error("Could not comment.");
+    }
   }, []);
 
   const react = useCallback(async (id: string, kind: ReactionKind) => {
