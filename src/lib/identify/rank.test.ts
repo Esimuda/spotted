@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { SPECIES, speciesIsSensitive, speciesPrompt } from "@/data/species";
 import { GUIDE_MARGIN_FLOOR, GUIDE_SCORE_FLOOR, matchStrength, rankScores } from "@/lib/identify/rank";
 import { acceptableNote, gemmaMessages } from "@/lib/identify/narrate";
-import { acceptableLook, guideLook, lookMessages } from "@/lib/identify/look";
+import { acceptableLook, firstLookSentence, guideLook, lookMessages, lookPrompt } from "@/lib/identify/look";
 import { SEED_SIGHTINGS } from "@/data/seed";
 
 describe("field guide", () => {
@@ -83,9 +83,11 @@ describe("look up", () => {
     const messages = lookMessages(species);
     expect(messages[1]?.content).toContain("African thrush");
     expect(messages[1]?.content).toContain(species.behaviour);
+    expect(lookPrompt(species)).toContain(species.behaviour);
     expect(acceptableLook("Watch it cock its head before it pulls something from the grass.")).toBe(true);
     expect(acceptableLook("As an AI I recommend looking up.")).toBe(false);
     expect(acceptableLook("Species: African thrush. Behaviour fact: hops.")).toBe(false);
+    expect(firstLookSentence("Watch it cock its head. Watch it cock its head.")).toBe("Watch it cock its head.");
     expect(guideLook(species).toLowerCase()).toContain("watch");
     expect(guideLook(species).length).toBeGreaterThan(20);
     for (const file of ["public/models/gemma/model_q4.onnx", "public/models/gemma/model_q4f16.onnx"]) {

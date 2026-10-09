@@ -1,11 +1,18 @@
 import { FACTS_MODEL } from "@/config/models";
 import type { Species } from "@/data/species";
+import { configureOnnxWasm, installGemmaGraphPatch } from "@/lib/identify/gemma-fetch";
 import type { ModelProgress } from "@/lib/types";
 
 type Chat = { role: string; content: string };
 type Generator = (
-  messages: Chat[],
-  options: { max_new_tokens: number; do_sample: boolean; temperature?: number },
+  messages: string | Chat[],
+  options: {
+    max_new_tokens: number;
+    do_sample: boolean;
+    temperature?: number;
+    return_full_text?: boolean;
+    repetition_penalty?: number;
+  },
 ) => Promise<{ generated_text: string | { role?: string; content?: string }[] }[]>;
 
 export type LookSource = "gemma" | "guide";
@@ -27,13 +34,22 @@ export function lookMessages(species: Species): Chat[] {
     {
       role: "system",
       content:
-        'You name one thing to notice outdoors. Use only the behaviour fact. One sentence. Start with "Watch". No greeting. No markdown.',
+        "You write one calm sentence for someone standing in front of this living thing. Use only the behaviour fact. Mention one thing to watch. No greeting. No markdown. No list.",
     },
     {
       role: "user",
-      content: `Species: ${species.commonName}. Behaviour fact: ${species.behaviour} Write one sentence that starts with "Watch".`,
+      content: `The ${species.commonName} does this: ${species.behaviour} In one sentence, what should a person watch?`,
     },
   ];
+}
+
+export function lookPrompt(species: Species): string {
+  return [
+    "Fact: Hovers over the water, then drops.",
+    "Watch: Watch it hang still before it drops.",
+    `Fact: ${species.behaviour}`,
+    "Watch:",
+  ].join("\n");
 }
 
 export function guideLook(species: Species): string {
@@ -45,11 +61,17 @@ export function guideLook(species: Species): string {
   return `For the next minute, watch this: ${lowered.slice(0, 120).trim()}.`;
 }
 
+export function firstLookSentence(text: string): string {
+  const cleaned = text.replace(/[*#]+/g, "").replace(/\s+/g, " ").trim();
+  const end = cleaned.search(/[.!?]/);
+  return (end === -1 ? cleaned : cleaned.slice(0, end + 1)).trim();
+}
+
 export function acceptableLook(text: string): boolean {
   const trimmed = text.replace(/[*#]+/g, "").replace(/\s+/g, " ").trim();
   if (trimmed.length < 20 || trimmed.length > 160) return false;
   if (/as an ai|language model|behaviour fact|species:/i.test(trimmed)) return false;
-  return /^(watch|look|listen|notice|count)\b/i.test(trimmed);
+  return /\b(watch|look|listen|notice|count)\b/i.test(trimmed);
 }
 
 function extractText(generated: string | { role?: string; content?: string }[] | undefined): string {
@@ -69,40 +91,16 @@ async function webGpuAvailable(): Promise<boolean> {
   }
 }
 
-/**
- * The published Gemma ONNX graph gathers token embeddings with int64 indices.
- * The WASM build of onnxruntime only implements GatherBlockQuantized for int32,
- * so session creation fails before any tokens are produced. These files are that
- * same graph plus one Cast to int32. The weights still download from the model repo.
- */
-const PATCHED_GRAPH: Record<string, string> = {
-  "model_q4.onnx": "/models/gemma/model_q4.onnx",
-  "model_q4f16.onnx": "/models/gemma/model_q4f16.onnx",
-};
-
-function installGraphPatch() {
-  const host = globalThis as typeof globalThis & { __spottedGemmaFetch?: boolean };
-  if (host.__spottedGemmaFetch || typeof globalThis.fetch !== "function") return;
-  const original = globalThis.fetch.bind(globalThis);
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const file = url.split("?")[0]?.split("/").pop() ?? "";
-    const patched = PATCHED_GRAPH[file];
-    if (patched && url.includes("/onnx/")) return original(patched);
-    return original(input, init);
-  }) as typeof fetch;
-  host.__spottedGemmaFetch = true;
-}
-
 async function loadGenerator(
   device: "webgpu" | "wasm",
   onProgress?: (progress: ModelProgress) => void,
 ): Promise<Generator> {
+  installGemmaGraphPatch();
   const { pipeline, env } = await import("@huggingface/transformers");
+  configureOnnxWasm(env);
   env.allowLocalModels = false;
   env.useBrowserCache = true;
-  env.cacheKey = "spotted-gemma-int32";
-  installGraphPatch();
+  env.cacheKey = "spotted-gemma-int32-cast";
   return (await pipeline("text-generation", FACTS_MODEL.id, {
     dtype: device === "webgpu" ? FACTS_MODEL.dtype : "q4",
     device,
@@ -146,12 +144,14 @@ export async function lookUpOnDevice(
     const generator = await browserPromise;
     const loadMs = performance.now() - started;
     const genStart = performance.now();
-    const output = await generator(lookMessages(species), {
-      max_new_tokens: 40,
+    const output = await generator(lookPrompt(species), {
+      max_new_tokens: 24,
       do_sample: false,
+      return_full_text: false,
+      repetition_penalty: 1.15,
     });
     const generateMs = performance.now() - genStart;
-    const raw = extractText(output?.[0]?.generated_text).replace(/[*#]+/g, "").replace(/\s+/g, " ").trim();
+    const raw = firstLookSentence(extractText(output?.[0]?.generated_text));
     const used = browserDevice ?? device;
     if (!acceptableLook(raw)) {
       const fallback: LookResult = {

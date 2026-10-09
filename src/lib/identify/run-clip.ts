@@ -2,6 +2,7 @@ import { VISION_MODEL } from "@/config/models";
 import { SPECIES, speciesPrompt } from "@/data/species";
 import { rankScores } from "@/lib/identify/rank";
 import type { IdentifyResult, ModelProgress } from "@/lib/types";
+import { configureOnnxWasm, installGemmaGraphPatch } from "@/lib/identify/gemma-fetch";
 
 type Classifier = (image: string, labels: string[]) => Promise<{ label: string; score: number }[]>;
 
@@ -15,7 +16,9 @@ export async function runClip(
     onProgress?: (progress: ModelProgress) => void;
   },
 ): Promise<IdentifyResult> {
+  installGemmaGraphPatch();
   const { pipeline, env } = await import("@huggingface/transformers");
+  configureOnnxWasm(env);
   env.allowLocalModels = false;
   if (options.cacheDir) env.cacheDir = options.cacheDir;
   if (!classifierPromise) {
