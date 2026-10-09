@@ -100,7 +100,7 @@ Privacy sits in [`src/lib/privacy.ts`](src/lib/privacy.ts). Sharing is off unles
 | Piece | What | Where it runs | License |
 | --- | --- | --- | --- |
 | Names | CLIP ViT-B/32, `Xenova/clip-vit-base-patch32`, 8-bit | Browser (WASM) and optional server | MIT |
-| Look up | Gemma 3 270M Instruct, `onnx-community/gemma-3-270m-it-ONNX`, `q4f16` on WebGPU, `q4` on WASM | Browser, cached after the first download | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
+| Look up | Gemma 3 270M Instruct, `onnx-community/gemma-3-270m-it-ONNX`, `q4f16` on WebGPU, `q4` on WASM | Browser, cached after the first download. The graph in `public/models/gemma` adds one int32 cast so the WASM runtime can run the official weights. | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
 | Trail note | Same Gemma build, or Ollama `gemma3:270m` | Server, only if you turn models on | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
 | Swap-in, not bundled | BioCLIP, `imageomics/bioclip` | Not shipped. No Transformers.js ONNX build yet | MIT |
 | Runtime | `@huggingface/transformers` | Browser and server | Apache-2.0 |

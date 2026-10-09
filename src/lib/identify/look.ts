@@ -69,6 +69,31 @@ async function webGpuAvailable(): Promise<boolean> {
   }
 }
 
+/**
+ * The published Gemma ONNX graph gathers token embeddings with int64 indices.
+ * The WASM build of onnxruntime only implements GatherBlockQuantized for int32,
+ * so session creation fails before any tokens are produced. These files are that
+ * same graph plus one Cast to int32. The weights still download from the model repo.
+ */
+const PATCHED_GRAPH: Record<string, string> = {
+  "model_q4.onnx": "/models/gemma/model_q4.onnx",
+  "model_q4f16.onnx": "/models/gemma/model_q4f16.onnx",
+};
+
+function installGraphPatch() {
+  const host = globalThis as typeof globalThis & { __spottedGemmaFetch?: boolean };
+  if (host.__spottedGemmaFetch || typeof globalThis.fetch !== "function") return;
+  const original = globalThis.fetch.bind(globalThis);
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const file = url.split("?")[0]?.split("/").pop() ?? "";
+    const patched = PATCHED_GRAPH[file];
+    if (patched && url.includes("/onnx/")) return original(patched);
+    return original(input, init);
+  }) as typeof fetch;
+  host.__spottedGemmaFetch = true;
+}
+
 async function loadGenerator(
   device: "webgpu" | "wasm",
   onProgress?: (progress: ModelProgress) => void,
@@ -76,6 +101,8 @@ async function loadGenerator(
   const { pipeline, env } = await import("@huggingface/transformers");
   env.allowLocalModels = false;
   env.useBrowserCache = true;
+  env.cacheKey = "spotted-gemma-int32";
+  installGraphPatch();
   return (await pipeline("text-generation", FACTS_MODEL.id, {
     dtype: device === "webgpu" ? FACTS_MODEL.dtype : "q4",
     device,

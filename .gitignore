@@ -37,6 +37,8 @@ yarn-error.log*
 
 # downloaded model weights
 *.onnx
+# Small patched graphs only. The weights stay on Hugging Face.
+!public/models/gemma/*.onnx
 *.safetensors
 *.gguf
 *.pt

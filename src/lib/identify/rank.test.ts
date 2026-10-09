@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SPECIES, speciesIsSensitive, speciesPrompt } from "@/data/species";
 import { GUIDE_MARGIN_FLOOR, GUIDE_SCORE_FLOOR, matchStrength, rankScores } from "@/lib/identify/rank";
@@ -87,5 +88,11 @@ describe("look up", () => {
     expect(acceptableLook("Species: African thrush. Behaviour fact: hops.")).toBe(false);
     expect(guideLook(species).toLowerCase()).toContain("watch");
     expect(guideLook(species).length).toBeGreaterThan(20);
+    for (const file of ["public/models/gemma/model_q4.onnx", "public/models/gemma/model_q4f16.onnx"]) {
+      const bytes = fs.readFileSync(file);
+      expect(bytes.byteLength).toBeGreaterThan(100_000);
+      expect(bytes.includes(Buffer.from("cast_input_ids_for_wasm_gather"))).toBe(true);
+      expect(bytes.includes(Buffer.from("model_q4"))).toBe(true);
+    }
   });
 });
