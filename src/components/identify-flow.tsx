@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/badge";
+import { LookUp } from "@/components/look-up";
 
 type Phase = "idle" | "camera" | "matching" | "result";
 
@@ -50,6 +51,8 @@ export function IdentifyFlow() {
   const [gemmaHint, setGemmaHint] = useState("");
   const [saving, setSaving] = useState(false);
   const [geoNote, setGeoNote] = useState("");
+  const [picked, setPicked] = useState(true);
+  const [ownLabel, setOwnLabel] = useState("");
 
   useEffect(() => {
     setEngine(readEngine());
@@ -121,6 +124,8 @@ export function IdentifyFlow() {
     setChosenId(named.top.speciesId);
     setTrailNote(species?.guideNote ?? "");
     setTrailSource("guide");
+    setPicked(named.strength !== "uncertain");
+    setOwnLabel("");
     setPhase("result");
   }
 
@@ -214,6 +219,50 @@ export function IdentifyFlow() {
     }
   }
 
+  function acceptMaybe(id: string) {
+    chooseSpecies(id);
+    setPicked(true);
+  }
+
+  function addNotice(line: string) {
+    setNote((current) => {
+      const next = current.trim() ? `${current.trim()} ${line.trim()}` : line.trim();
+      return next.slice(0, 280);
+    });
+  }
+
+  async function saveUnknown() {
+    if (!result || !ownLabel.trim()) return;
+    const maybe = result.top;
+    setSaving(true);
+    setError("");
+    try {
+      const saved = await createSighting({
+        id: crypto.randomUUID(),
+        speciesId: "unknown",
+        label: ownLabel.trim(),
+        group: maybe.group,
+        confidence: maybe.score,
+        strength: "uncertain",
+        imageDataUrl: preview,
+        note,
+        placeName: placeName || "Unnamed place",
+        region,
+        lat: point?.lat ?? null,
+        lng: point?.lng ?? null,
+        shareLocation: share,
+        modelId: result.modelId,
+        engine: result.engine,
+        trailNote: "",
+        trailNoteSource: "guide",
+      });
+      router.push(`/s/${saved.id}`);
+    } catch (err) {
+      setError(messageFrom(err));
+      setSaving(false);
+    }
+  }
+
   async function save() {
     const species = speciesById(chosenId);
     if (!species || !result) return;
@@ -247,7 +296,7 @@ export function IdentifyFlow() {
 
   const species = speciesById(chosenId);
   const headline =
-    result?.strength === "uncertain" ? "Closest name in the guide" : result?.strength === "possible" ? "Looks like" : "This looks like";
+    result?.strength === "uncertain" ? "If this is the one" : result?.strength === "possible" ? "Looks like" : "This looks like";
 
   return (
     <div className="mx-auto max-w-lg px-4 pb-8">
@@ -299,8 +348,60 @@ export function IdentifyFlow() {
         </div>
       ) : null}
 
-      {phase === "result" && species && result ? (
-        <div className="space-y-5">
+      {phase === "result" && result && !picked ? (
+        <div data-screen="not-sure" className="space-y-5">
+          <div className="photo-frame relative aspect-[4/5] bg-dusk">
+            <img src={preview} alt="" />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-dusk from-20% via-dusk/90 to-transparent px-5 pb-5 pt-28 text-cream">
+              <p className="kicker text-gold">Not sure</p>
+              <h1 className="font-display text-5xl leading-[0.9]">Not in my guide yet</h1>
+              <p className="mt-3 max-w-xs text-sm leading-6 text-cream/85">
+                The closest match is too weak, or too close to the next name, to call it. These are maybes.
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2" aria-label="Maybe">
+            {[result.top, ...result.alternatives].map((match) => (
+              <button
+                key={match.speciesId}
+                type="button"
+                onClick={() => acceptMaybe(match.speciesId)}
+                className="flex w-full items-baseline justify-between gap-3 rounded-2xl bg-paper px-4 py-3 text-left"
+              >
+                <span>
+                  <span className="kicker text-clay">Maybe</span>
+                  <span className="mt-1 block font-display text-2xl leading-none">{match.commonName}</span>
+                  <span className="mt-1 block text-sm italic text-ink-soft">{match.scientificName}</span>
+                </span>
+                <span className="text-sm text-ink-soft">{formatScore(match.score)}</span>
+              </button>
+            ))}
+          </div>
+          <div className="space-y-2 rounded-3xl bg-paper p-4">
+            <Label htmlFor="own-label">Or save it under your own label</Label>
+            <Input
+              id="own-label"
+              value={ownLabel}
+              maxLength={80}
+              onChange={(event) => setOwnLabel(event.target.value)}
+              placeholder="A brown bird on the fence"
+            />
+            <p className="text-sm leading-6 text-ink-soft">
+              Unknown sightings stay out of the guide. The next photo will not pretend this name is a species.
+            </p>
+          </div>
+          {error ? <p className="text-sm text-clay-deep">{error}</p> : null}
+          <Button className="w-full" onClick={() => void saveUnknown()} disabled={saving || !ownLabel.trim()}>
+            {saving ? "Saving…" : "Save as an unknown sighting"}
+          </Button>
+          <button type="button" className="w-full text-sm text-ink-soft" onClick={() => { setPhase("idle"); setPreview(""); }}>
+            Discard and look again
+          </button>
+        </div>
+      ) : null}
+
+      {phase === "result" && species && result && picked ? (
+        <div data-screen="lookup" className="space-y-5">
           <div className="photo-frame relative aspect-[4/5] bg-dusk">
             <img src={preview} alt="" />
             <div className="absolute right-4 top-4 stamp rounded-md border-2 border-gold px-2 py-1 text-xs font-bold uppercase tracking-[0.16em] text-gold">
@@ -323,6 +424,8 @@ export function IdentifyFlow() {
             That is the name. The interesting part is still in front of you.
           </p>
 
+          <LookUp species={species} onNotice={addNotice} />
+
           <div className="flex flex-wrap gap-2" aria-label="Other names">
             {[result.top, ...result.alternatives].map((match) => (
               <button
@@ -338,6 +441,14 @@ export function IdentifyFlow() {
           </div>
 
           <FactGrid habitat={species.habitat} diet={species.diet} behaviour={species.behaviour} conservation={species.status} />
+          <a href={species.sourceUrl} className="text-sm font-semibold text-moss underline-offset-4 hover:underline" target="_blank" rel="noreferrer">
+            Source for these facts
+          </a>
+          {result.strength === "uncertain" ? (
+            <button type="button" className="text-sm text-ink-soft" onClick={() => setPicked(false)}>
+              Back to the maybes
+            </button>
+          ) : null}
 
           <div className="rounded-3xl bg-paper p-4">
             <p className="kicker text-moss">{trailSource === "guide" ? "Field guide" : trailSource === "ollama" ? "Gemma, via your endpoint" : "Gemma 3 270M"}</p>
@@ -347,7 +458,7 @@ export function IdentifyFlow() {
             </Button>
             {gemmaHint ? <p className="mt-2 text-xs leading-5 text-ink-soft">{gemmaHint}</p> : null}
             <p className="mt-2 text-xs leading-5 text-ink-soft">
-              Gemma only rewrites these facts, on the server or an Ollama endpoint. If the note does not name the species, the guide stays. Naming on this phone is CLIP, not this rewrite.
+              This rewrite runs on the server, or on an Ollama endpoint if you set one. Look up is the copy that runs Gemma on the phone. If a rewrite does not name the species, the guide stays.
             </p>
           </div>
 

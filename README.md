@@ -6,6 +6,20 @@ The product name is one constant, `APP_NAME` in [`src/config/brand.ts`](src/conf
 
 The demo trail is fictional and West African: Lekki Conservation Centre, Okomu National Park, Obudu Mountain Resort, and Yankari Game Reserve. The guide also includes species from elsewhere, so a walk outside Nigeria still gets a name. Reference photos are credited in [`public/seed/credits.json`](public/seed/credits.json). The people in the feed are not real.
 
+## Verify in 60 seconds
+
+Live app: [https://spotted-91b2.onrender.com](https://spotted-91b2.onrender.com)
+
+1. Open the field tab and run a reference photo (pied kingfisher is a clear one).
+2. On the result, press **Look up**. The first time, Gemma 3 270M downloads in the browser. The screen then dims to a 60-second timer and one thing to notice.
+3. When the minute ends, or when you press **I looked**, answer **What did you notice?** That line is saved into the sighting note.
+
+You should see a common name when the match is clear, or a designed **Not in my guide yet** state with two or three maybes when it is not. The look-up line is labeled **Gemma 3 270M on this phone** or **Field guide** if this device cannot run the model.
+
+## Built during the challenge
+
+This was built for the [Hacktoberfest Open-Source AI Challenge, Week 1: Touch Grass](https://dev.to/challenges/hacktoberfest-week1-2026-10-05). An AI coding assistant helped with the implementation. The field guide facts are checked against published sources linked on each species, and the outdoor story in `docs/dev-post.md` is left for the person who actually took the walk. The demo people and their notes are fiction.
+
 ## Run it
 
 Node 22 or newer.
@@ -40,8 +54,10 @@ Copy [`.env.example`](.env.example) to `.env.local` if you want to change the de
 - Land, then open a phone-shaped field guide.
 - Take a photo, upload one, or try a reference image.
 - Get a common name, scientific name, confidence, and the next-best names.
-- Read habitat, diet, behaviour, and conservation status without a network.
-- Ask Gemma to rewrite those facts. If the rewrite does not name the species, the guide note stays.
+- If the top score is below 0.12, or the gap to second place is below 0.04, the screen says it is not sure and lets you save an unknown sighting under your own label.
+- Read habitat, diet, behaviour, and conservation status without a network. Each species links a source.
+- Press **Look up**. Gemma 3 270M runs in the browser and names one thing to notice for 60 seconds. If the phone cannot run it, the guide's behaviour line is used and labeled as such.
+- Ask the server to rewrite the facts. If the rewrite does not name the species, the guide note stays.
 - Post a sighting, comment, and react. A life list and a streak sit on the profile.
 - See a map. Shared pins are opt-in. Sensitive species are stored as a cell about 11 km across. The server never receives the exact point.
 - Save a note while offline. It syncs when the phone is back. The installed app caches its shell in production.
@@ -57,10 +73,13 @@ flowchart TD
   api[Next.js API]
   sqlite[(SQLite)]
   clipServer[CLIP on the server]
+  gemmaPhone[Gemma 3 270M in the browser]
   gemma[Gemma 3 270M or an Ollama endpoint]
 
   phone --> clipPhone
   clipPhone --> guide
+  phone --> gemmaPhone
+  gemmaPhone --> guide
   phone --> idb
   idb -->|when online| api
   phone --> api
@@ -71,18 +90,20 @@ flowchart TD
   gemma --> guide
 ```
 
-The guide is the allow-list. CLIP may only return a name from it. Gemma may only rewrite the four facts already on that species, and the app drops the rewrite when it fails that check.
+The guide is the allow-list. CLIP may only return a name from it. Scores are a softmax over the whole guide, so the unsure rule is a top score under 0.12 or a margin under 0.04 (`GUIDE_SCORE_FLOOR` and `GUIDE_MARGIN_FLOOR` in [`src/lib/identify/rank.ts`](src/lib/identify/rank.ts)). Gemma may only use the behaviour fact for Look up, and only the four stored facts for a trail note. A rewrite that fails the check is dropped.
 
 Privacy sits in [`src/lib/privacy.ts`](src/lib/privacy.ts). Sharing is off unless the person opts in. Threatened species, and a few timber trees marked sensitive, are snapped to a 0.1 degree cell before insert.
 
-## Models, and why open ones
+## Why open-weight
 
-| Piece | What | License |
-| --- | --- | --- |
-| Names | CLIP ViT-B/32, `Xenova/clip-vit-base-patch32`, 8-bit, Transformers.js | MIT |
-| Trail note | Gemma 3 270M Instruct, `onnx-community/gemma-3-270m-it-ONNX`, `q4f16` | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
-| Swap-in, not bundled | BioCLIP, `imageomics/bioclip` | MIT, no Transformers.js ONNX build yet |
-| Runtime | `@huggingface/transformers` | Apache-2.0 |
+
+| Piece | What | Where it runs | License |
+| --- | --- | --- | --- |
+| Names | CLIP ViT-B/32, `Xenova/clip-vit-base-patch32`, 8-bit | Browser (WASM) and optional server | MIT |
+| Look up | Gemma 3 270M Instruct, `onnx-community/gemma-3-270m-it-ONNX`, `q4f16` on WebGPU, `q4` on WASM | Browser, cached after the first download | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
+| Trail note | Same Gemma build, or Ollama `gemma3:270m` | Server, only if you turn models on | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
+| Swap-in, not bundled | BioCLIP, `imageomics/bioclip` | Not shipped. No Transformers.js ONNX build yet | MIT |
+| Runtime | `@huggingface/transformers` | Browser and server | Apache-2.0 |
 
 Open models are the reason this works on a walk.
 
@@ -126,7 +147,7 @@ Manual setup, if you are not using the blueprint: New Web Service, runtime Node,
 ```
 src/app/                 pages and API routes
 src/components/          phone UI, map, identify flow
-src/data/species.ts      the field guide
+src/data/species.ts      the field guide, plus src/data/more-species.ts
 src/lib/identify/        CLIP and Gemma
 src/lib/privacy.ts       pins
 src/lib/db.ts            SQLite

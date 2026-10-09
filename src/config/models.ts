@@ -19,7 +19,7 @@ export const FACTS_MODEL = {
   dtype: "q4f16" as const,
   license: "Gemma Terms of Use",
   licenseUrl: "https://ai.google.dev/gemma/terms",
-  task: "rewrite bundled field-guide facts into a short trail note",
+  task: "one thing to notice, in the browser; trail notes on the server",
 };
 
 export const BIOCLIP_SWAP = {

@@ -1,3 +1,5 @@
+import { MORE_SPECIES } from "./more-species";
+
 export type SpeciesGroup = "bird" | "mammal" | "reptile" | "insect" | "plant";
 
 export type Iucn = "LC" | "NT" | "VU" | "EN" | "CR" | "DD" | "NE";
@@ -15,6 +17,8 @@ export type Species = {
   diet: string;
   behaviour: string;
   guideNote: string;
+  /** A page that backs the facts above. Wikipedia unless a Red List page is the clearer source. */
+  sourceUrl: string;
 };
 
 export const IUCN_LABEL: Record<Iucn, string> = {
@@ -35,7 +39,7 @@ export const GROUP_LABEL: Record<SpeciesGroup, string> = {
   plant: "Plant",
 };
 
-export const SPECIES: Species[] = [
+const CATALOG: Omit<Species, "sourceUrl">[] = [
   {
     id: "pied-kingfisher",
     commonName: "Pied kingfisher",
@@ -341,11 +345,11 @@ export const SPECIES: Species[] = [
     commonName: "Monarch",
     scientificName: "Danaus plexippus",
     group: "insect",
-    status: "LC",
-    sensitive: false,
+    status: "EN",
+    sensitive: true,
     habitat: "Milkweed patches, fields, and gardens. Famous for the North American migration.",
     diet: "Nectar. Caterpillars eat milkweed.",
-    behaviour: "Orange wings with black veins. The migratory population has been in serious trouble even though the species is still listed least concern.",
+    behaviour: "Orange wings with black veins. The migratory monarch was listed Endangered on the IUCN Red List in 2022.",
     guideNote: "Orange, black-veined, and usually on its way somewhere. The long migration is the fragile part.",
   },
   {
@@ -469,6 +473,15 @@ export const SPECIES: Species[] = [
     guideNote: "A sunflower is an easy yes. Use it to see that the model is awake, then go find something wilder.",
   },
 ];
+
+function attachSource(species: Omit<Species, "sourceUrl">): Species {
+  return {
+    ...species,
+    sourceUrl: `https://en.wikipedia.org/wiki/${species.scientificName.replace(/ /g, "_")}`,
+  };
+}
+
+export const SPECIES: Species[] = [...CATALOG.map(attachSource), ...MORE_SPECIES];
 
 const BY_ID = new Map(SPECIES.map((species) => [species.id, species]));
 

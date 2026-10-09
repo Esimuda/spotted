@@ -79,4 +79,24 @@ describe("trail database", () => {
       /you/,
     );
   });
+
+  it("saves an unknown sighting under the person's own label", async () => {
+    const { createSighting } = await import("@/lib/db");
+    const saved = createSighting({
+      id: "note-test-unknown",
+      speciesId: "unknown",
+      label: "A brown bird on the fence",
+      group: "bird",
+      confidence: 0.08,
+      strength: "uncertain",
+      imageUrl: "/seed/agama.jpg",
+      note: "Not in the guide.",
+      shareLocation: false,
+    });
+    expect(saved.commonName).toBe("A brown bird on the fence");
+    expect(saved.scientificName).toBe("Not in this guide");
+    expect(saved.speciesId).toBe("unknown");
+    expect(saved.conservation).toBe("NE");
+    expect(() => createSighting({ speciesId: "unknown", imageUrl: "/seed/agama.jpg" })).toThrow(/Name the sighting/);
+  });
 });

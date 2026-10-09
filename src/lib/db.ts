@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { SEED_SIGHTINGS, SEED_VERSION, PROFILES, assertSeed } from "@/data/seed";
-import { speciesById, speciesIsSensitive } from "@/data/species";
+import { speciesById, speciesIsSensitive, type SpeciesGroup } from "@/data/species";
 import { placeById } from "@/data/places";
 import { decideLocation } from "@/lib/privacy";
 import { cleanText } from "@/lib/utils";
@@ -340,6 +340,9 @@ export type NewSightingInput = {
   engine?: string;
   trailNote?: string;
   trailNoteSource?: string;
+  /** Required when speciesId is "unknown". Never added to the CLIP label list. */
+  label?: string;
+  group?: SpeciesGroup;
 };
 
 export function createSighting(input: NewSightingInput): Sighting {
@@ -347,13 +350,19 @@ export function createSighting(input: NewSightingInput): Sighting {
   if (input.authorId && input.authorId !== "you") {
     throw new Error("Demo notes are posted as you.");
   }
-  const species = speciesById(input.speciesId ?? "");
-  if (!species) throw new Error("That species is not in this field guide.");
+  const unknown = input.speciesId === "unknown";
+  const species = unknown ? null : speciesById(input.speciesId ?? "");
+  if (!unknown && !species) throw new Error("That species is not in this field guide.");
+  const ownLabel = cleanText(input.label, 80);
+  if (unknown && !ownLabel) throw new Error("Name the sighting before saving it.");
+  const group = input.group === "bird" || input.group === "mammal" || input.group === "reptile" || input.group === "insect" || input.group === "plant"
+    ? input.group
+    : "bird";
   const id = typeof input.id === "string" && /^[a-zA-Z0-9_-]{6,80}$/.test(input.id) ? input.id : crypto.randomUUID();
   const existing = getSighting(id);
   if (existing) return existing;
 
-  const sensitive = speciesIsSensitive(species);
+  const sensitive = species ? speciesIsSensitive(species) : false;
   const lat = typeof input.lat === "number" ? input.lat : null;
   const lng = typeof input.lng === "number" ? input.lng : null;
   const decision = decideLocation({
@@ -370,7 +379,7 @@ export function createSighting(input: NewSightingInput): Sighting {
   const engine: Engine = input.engine === "browser" || input.engine === "server" ? input.engine : "guide";
   const noteSource: TrailNoteSource =
     input.trailNoteSource === "gemma" || input.trailNoteSource === "ollama" ? input.trailNoteSource : "guide";
-  const trailNote = cleanText(input.trailNote, 500) || species.guideNote;
+  const trailNote = cleanText(input.trailNote, 500) || species?.guideNote || "";
   const confidence = typeof input.confidence === "number" && input.confidence >= 0 && input.confidence <= 1 ? input.confidence : 0;
 
   db.prepare(
@@ -382,10 +391,10 @@ export function createSighting(input: NewSightingInput): Sighting {
   ).run(
     id,
     "you",
-    species.id,
-    species.commonName,
-    species.scientificName,
-    species.group,
+    unknown ? "unknown" : species!.id,
+    unknown ? ownLabel : species!.commonName,
+    unknown ? "Not in this guide" : species!.scientificName,
+    unknown ? group : species!.group,
     confidence,
     strength,
     imageUrl,
@@ -400,10 +409,10 @@ export function createSighting(input: NewSightingInput): Sighting {
     engine,
     trailNote,
     noteSource,
-    species.habitat,
-    species.diet,
-    species.behaviour,
-    species.status,
+    species?.habitat ?? "",
+    species?.diet ?? "",
+    species?.behaviour ?? "",
+    species?.status ?? "NE",
     sensitive ? 1 : 0,
   );
   return getSighting(id)!;

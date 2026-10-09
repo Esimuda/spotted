@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { SPECIES, speciesIsSensitive, speciesPrompt } from "@/data/species";
-import { matchStrength, rankScores } from "@/lib/identify/rank";
+import { GUIDE_MARGIN_FLOOR, GUIDE_SCORE_FLOOR, matchStrength, rankScores } from "@/lib/identify/rank";
 import { acceptableNote, gemmaMessages } from "@/lib/identify/narrate";
+import { acceptableLook, guideLook, lookMessages } from "@/lib/identify/look";
 import { SEED_SIGHTINGS } from "@/data/seed";
 
 describe("field guide", () => {
@@ -10,6 +11,14 @@ describe("field guide", () => {
     const prompts = SPECIES.map((species) => speciesPrompt(species));
     expect(new Set(ids).size).toBe(ids.length);
     expect(new Set(prompts).size).toBe(prompts.length);
+    expect(SPECIES.length).toBeGreaterThanOrEqual(100);
+    expect(SPECIES.length).toBeLessThanOrEqual(130);
+    expect(SPECIES.some((species) => species.id === "unknown")).toBe(false);
+    for (const species of SPECIES) {
+      expect(species.sourceUrl.startsWith("https://")).toBe(true);
+      expect(species.habitat.length).toBeGreaterThan(8);
+      expect(species.behaviour.length).toBeGreaterThan(8);
+    }
   });
 
   it("softens every threatened species", () => {
@@ -44,8 +53,12 @@ describe("ranking", () => {
     expect(result.alternatives[0]?.speciesId).toBe("european-robin");
   });
 
-  it("marks a thin margin as uncertain", () => {
+  it("marks a thin margin or a weak top score as uncertain", () => {
     expect(matchStrength(0.16, 0.15)).toBe("uncertain");
+    expect(matchStrength(GUIDE_SCORE_FLOOR - 0.01, 0.01)).toBe("uncertain");
+    expect(matchStrength(0.2, 0.2 - GUIDE_MARGIN_FLOOR + 0.001)).toBe("uncertain");
+    expect(matchStrength(0.2, 0.15)).toBe("possible");
+    expect(matchStrength(0.18, 0.09)).toBe("strong");
   });
 });
 
@@ -59,5 +72,20 @@ describe("gemma notes", () => {
     expect(acceptableNote("The pied kingfisher hovers over the lagoon and dives for fish.", species)).toBe(true);
     expect(acceptableNote("**Trail Note** Locals enjoy the cuisine and assist with field work.", species)).toBe(false);
     expect(acceptableNote("Species: Pied kingfisher. Habitat: rivers. Start with the common name.", species)).toBe(false);
+    expect(SPECIES.find((item) => item.id === "monarch")?.status).toBe("EN");
+  });
+});
+
+describe("look up", () => {
+  it("asks for one grounded watch prompt and keeps a guide sentence when Gemma wanders", () => {
+    const species = SPECIES.find((item) => item.id === "african-thrush")!;
+    const messages = lookMessages(species);
+    expect(messages[1]?.content).toContain("African thrush");
+    expect(messages[1]?.content).toContain(species.behaviour);
+    expect(acceptableLook("Watch it cock its head before it pulls something from the grass.")).toBe(true);
+    expect(acceptableLook("As an AI I recommend looking up.")).toBe(false);
+    expect(acceptableLook("Species: African thrush. Behaviour fact: hops.")).toBe(false);
+    expect(guideLook(species).toLowerCase()).toContain("watch");
+    expect(guideLook(species).length).toBeGreaterThan(20);
   });
 });

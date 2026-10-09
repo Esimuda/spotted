@@ -2,11 +2,28 @@ import { SPECIES, speciesById, speciesPrompt, type Species } from "@/data/specie
 import { VISION_MODEL } from "@/config/models";
 import type { IdentifyResult, MatchStrength, RankedMatch } from "@/lib/types";
 
+/**
+ * CLIP scores are a softmax over every prompt in the guide.
+ * With a guide of about 100 names, a flat distribution sits near 0.01.
+ * A photo of something the guide actually contains usually clears 0.12
+ * and leaves a gap to the runner-up. Those two checks are the honesty rule.
+ *
+ * Unsure when the top score is below {@link GUIDE_SCORE_FLOOR} (0.12)
+ * or the margin over second place is below {@link GUIDE_MARGIN_FLOOR} (0.04).
+ * Strong when the top is at least 0.28, or at least 0.16 with a margin of 0.08.
+ * Anything else that cleared the floors is only "possible".
+ *
+ * Checked against the ranking tests: 0.16 versus 0.15 stays unsure,
+ * and a clear win such as 0.72 versus 0.20 stays strong.
+ */
+export const GUIDE_SCORE_FLOOR = 0.12;
+export const GUIDE_MARGIN_FLOOR = 0.04;
+
 export function matchStrength(top: number, second: number): MatchStrength {
   const margin = top - second;
-  if (top >= 0.45 || (top >= 0.22 && margin >= 0.1)) return "strong";
-  if (top >= 0.1 && margin >= 0.035) return "possible";
-  return "uncertain";
+  if (top < GUIDE_SCORE_FLOOR || margin < GUIDE_MARGIN_FLOOR) return "uncertain";
+  if (top >= 0.28 || (top >= 0.16 && margin >= 0.08)) return "strong";
+  return "possible";
 }
 
 export function rankScores(

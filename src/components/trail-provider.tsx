@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { speciesById, speciesIsSensitive } from "@/data/species";
+import { speciesById, speciesIsSensitive, type SpeciesGroup } from "@/data/species";
 import { pendingSightings, queueSighting, removePending } from "@/lib/offline/store";
 import { mergeSightings } from "@/lib/merge";
 import { decideLocation } from "@/lib/privacy";
@@ -24,6 +24,8 @@ type CreateInput = {
   engine: Sighting["engine"];
   trailNote: string;
   trailNoteSource: Sighting["trailNoteSource"];
+  label?: string;
+  group?: SpeciesGroup;
 };
 
 type TrailContextValue = {
@@ -108,6 +110,8 @@ export function TrailProvider({ children }: { children: React.ReactNode }) {
             engine: sighting.engine,
             trailNote: sighting.trailNote,
             trailNoteSource: sighting.trailNoteSource,
+            label: sighting.speciesId === "unknown" ? sighting.commonName : undefined,
+            group: sighting.group,
           }),
         });
         if (!response.ok) continue;
@@ -142,7 +146,8 @@ export function TrailProvider({ children }: { children: React.ReactNode }) {
   const createSighting = useCallback(
     async (input: CreateInput) => {
       const imageUrl = input.imageDataUrl || input.imageUrl || "";
-      const species = speciesById(input.speciesId);
+      const unknown = input.speciesId === "unknown";
+      const species = unknown ? undefined : speciesById(input.speciesId);
       const decision = decideLocation({
         lat: input.lat,
         lng: input.lng,
@@ -154,9 +159,9 @@ export function TrailProvider({ children }: { children: React.ReactNode }) {
         authorId: "you",
         authorName: profiles.find((profile) => profile.id === "you")?.name ?? "You",
         speciesId: input.speciesId,
-        commonName: species?.commonName ?? "",
-        scientificName: species?.scientificName ?? "",
-        group: species?.group ?? "bird",
+        commonName: unknown ? (input.label?.trim() || "Unknown") : (species?.commonName ?? ""),
+        scientificName: unknown ? "Not in this guide" : (species?.scientificName ?? ""),
+        group: unknown ? (input.group ?? species?.group ?? "bird") : (species?.group ?? "bird"),
         confidence: input.confidence,
         strength: input.strength,
         imageUrl,
