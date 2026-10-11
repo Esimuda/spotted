@@ -30,9 +30,9 @@ export function MapCanvas({
       }
       const map = L.map(holder.current, { scrollWheelZoom: false, zoomControl: true });
       mapRef.current = map;
-      L.tileLayer("https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        attribution: "&copy; OpenStreetMap &copy; CARTO",
-        maxZoom: 18,
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
+        maxZoom: 19,
       }).addTo(map);
       const points: [number, number][] = [];
       for (const sighting of sightings) {

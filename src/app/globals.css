@@ -163,3 +163,8 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Look up veil owns the whole screen: hide the tab bar while it is open. */
+body:has(.lookup-veil) .app-nav {
+  display: none;
+}
